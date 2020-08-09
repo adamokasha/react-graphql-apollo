@@ -1,18 +1,15 @@
 import React from "react";
 import gql from "graphql-tag";
 import { Query } from "react-apollo";
+
 import RepositoryList, { REPOSITORY_FRAGMENT } from "../Repository";
 import Loading from "../Loading";
 import ErrorMessage from "../Error";
 
-const GET_REPOSITORIES_OF_CURRENT_USER = gql`
-  query($cursor: String) {
-    viewer {
-      repositories(
-        first: 5
-        orderBy: { direction: DESC, field: STARGAZERS }
-        after: $cursor
-      ) {
+const GET_REPOSITORIES_OF_ORGANIZATION = gql`
+  query($organizationName: String!, $cursor: String) {
+    organization(login: $organizationName) {
+      repositories(first: 5, after: $cursor) {
         edges {
           node {
             ...repository
@@ -28,9 +25,13 @@ const GET_REPOSITORIES_OF_CURRENT_USER = gql`
   ${REPOSITORY_FRAGMENT}
 `;
 
-const Profile = () => (
+const Organization = ({ organizationName }) => (
   <Query
-    query={GET_REPOSITORIES_OF_CURRENT_USER}
+    query={GET_REPOSITORIES_OF_ORGANIZATION}
+    variables={{
+      organizationName,
+    }}
+    skip={organizationName === ""}
     notifyOnNetworkStatusChange={true}
   >
     {({ data, loading, error, fetchMore }) => {
@@ -38,22 +39,22 @@ const Profile = () => (
         return <ErrorMessage error={error} />;
       }
 
-      if (!data && loading) {
+      if (loading && !data) {
         return <Loading />;
       }
 
-      const { viewer } = data;
+      const { organization } = data;
 
       return (
         <RepositoryList
           loading={loading}
-          repositories={viewer.repositories}
+          repositories={organization.repositories}
           fetchMore={fetchMore}
-          entry={"viewer"}
+          entry={"organization"}
         />
       );
     }}
   </Query>
 );
 
-export default Profile;
+export default Organization;
